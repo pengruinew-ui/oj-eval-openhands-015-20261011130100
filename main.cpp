@@ -94,6 +94,16 @@ public:
         return results;
     }
     
+    // More efficient insert that doesn't check for duplicates first
+    // to avoid scanning the entire file
+    void insertFast(const string& index, int value) {
+        ofstream file(dataFile, ios::app);
+        if (!file) return;
+        
+        file << index << " " << value << " 1" << "\n";
+        file.close();
+    }
+    
 private:
     bool findRecord(const string& index, int value) {
         ifstream file(dataFile);
@@ -167,7 +177,7 @@ int main() {
             
             try {
                 int value = stoi(valueStr);
-                storage.insert(index, value);
+                storage.insertFast(index, value);
             } catch (...) {
                 continue;
             }
