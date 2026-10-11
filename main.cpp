@@ -3,30 +3,20 @@
 #include <string>
 #include <vector>
 #include <algorithm>
-#include <cstring>
-#include <cstdint>
+#include <sstream>
 
 using namespace std;
 
 class FileStorage {
 private:
-    string dataFile = "storage.dat";
-    
-    struct Record {
-        string index;
-        int value;
-        bool deleted;
-        
-        Record() : value(0), deleted(false) {}
-        Record(const string& idx, int val) : index(idx), value(val), deleted(false) {}
-    };
+    string dataFile = "storage.txt";
     
 public:
     FileStorage() {
         // Check if file exists, create if not
         ifstream check(dataFile);
         if (!check.good()) {
-            ofstream create(dataFile, ios::binary);
+            ofstream create(dataFile);
             create.close();
         }
     }
@@ -37,83 +27,60 @@ public:
             return; // Don't insert duplicate
         }
         
-        // Append new record
-        ofstream file(dataFile, ios::binary | ios::app);
+        // Append new record in format: index value active
+        ofstream file(dataFile, ios::app);
         if (!file) return;
         
-        // Write record format: [index_len][index][value][deleted_flag]
-        uint8_t indexLen = index.length();
-        file.write(reinterpret_cast<const char*>(&indexLen), 1);
-        file.write(index.c_str(), indexLen);
-        file.write(reinterpret_cast<const char*>(&value), sizeof(value));
-        bool deleted = false;
-        file.write(reinterpret_cast<const char*>(&deleted), sizeof(deleted));
-        
+        file << index << " " << value << " 1" << "\n";
         file.close();
     }
     
     void deleteRecord(const string& index, int value) {
-        fstream file(dataFile, ios::binary | ios::in | ios::out);
-        if (!file) return;
+        // Read all records, mark matching ones as deleted
+        vector<string> lines;
+        ifstream inFile(dataFile);
+        string line;
         
-        streampos pos = 0;
-        while (file) {
-            uint8_t indexLen;
-            file.read(reinterpret_cast<char*>(&indexLen), 1);
-            if (file.eof()) break;
+        while (getline(inFile, line)) {
+            istringstream iss(line);
+            string fileIndex;
+            int fileValue;
+            int active;
             
-            char indexBuf[65];
-            file.read(indexBuf, indexLen);
-            if (file.eof()) break;
-            string currentIndex(indexBuf, indexLen);
-            
-            int currentValue;
-            file.read(reinterpret_cast<char*>(&currentValue), sizeof(currentValue));
-            if (file.eof()) break;
-            
-            bool deleted;
-            file.read(reinterpret_cast<char*>(&deleted), sizeof(deleted));
-            if (file.eof()) break;
-            
-            if (!deleted && currentIndex == index && currentValue == value) {
-                // Mark as deleted
-                file.seekp(static_cast<streampos>(pos) + 1 + indexLen + sizeof(currentValue));
-                deleted = true;
-                file.write(reinterpret_cast<const char*>(&deleted), sizeof(deleted));
-                break;
+            if (iss >> fileIndex >> fileValue >> active) {
+                if (fileIndex == index && fileValue == value && active == 1) {
+                    // Mark as deleted
+                    lines.push_back(fileIndex + " " + to_string(fileValue) + " 0");
+                } else {
+                    lines.push_back(line);
+                }
             }
-            
-            pos = file.tellg();
         }
+        inFile.close();
         
-        file.close();
+        // Write back all records
+        ofstream outFile(dataFile);
+        for (const string& l : lines) {
+            outFile << l << "\n";
+        }
+        outFile.close();
     }
     
     vector<int> find(const string& index) {
         vector<int> results;
-        ifstream file(dataFile, ios::binary);
-        if (!file) return results;
+        ifstream file(dataFile);
+        string line;
         
-        while (file) {
-            uint8_t indexLen;
-            file.read(reinterpret_cast<char*>(&indexLen), 1);
-            if (file.eof()) break;
-            
-            char indexBuf[65];
-            file.read(indexBuf, indexLen);
-            if (file.eof()) break;
-            string currentIndex(indexBuf, indexLen);
-            
+        while (getline(file, line)) {
+            istringstream iss(line);
+            string fileIndex;
             int value;
-            file.read(reinterpret_cast<char*>(&value), sizeof(value));
-            if (file.eof()) break;
+            int active;
             
-            bool deleted;
-            file.read(reinterpret_cast<char*>(&deleted), sizeof(deleted));
-            if (file.eof()) break;
-            
-            if (!deleted && currentIndex == index) {
-                results.push_back(value);
+            if (iss >> fileIndex >> value >> active) {
+                if (fileIndex == index && active == 1) {
+                    results.push_back(value);
+                }
             }
         }
         
@@ -126,30 +93,20 @@ public:
     
 private:
     bool findRecord(const string& index, int value) {
-        ifstream file(dataFile, ios::binary);
-        if (!file) return false;
+        ifstream file(dataFile);
+        string line;
         
-        while (file) {
-            uint8_t indexLen;
-            file.read(reinterpret_cast<char*>(&indexLen), 1);
-            if (file.eof()) break;
+        while (getline(file, line)) {
+            istringstream iss(line);
+            string fileIndex;
+            int fileValue;
+            int active;
             
-            char indexBuf[65];
-            file.read(indexBuf, indexLen);
-            if (file.eof()) break;
-            string currentIndex(indexBuf, indexLen);
-            
-            int currentValue;
-            file.read(reinterpret_cast<char*>(&currentValue), sizeof(currentValue));
-            if (file.eof()) break;
-            
-            bool deleted;
-            file.read(reinterpret_cast<char*>(&deleted), sizeof(deleted));
-            if (file.eof()) break;
-            
-            if (!deleted && currentIndex == index && currentValue == value) {
-                file.close();
-                return true;
+            if (iss >> fileIndex >> fileValue >> active) {
+                if (fileIndex == index && fileValue == value && active == 1) {
+                    file.close();
+                    return true;
+                }
             }
         }
         
