@@ -4,6 +4,7 @@
 #include <vector>
 #include <algorithm>
 #include <sstream>
+#include <cstdio>
 
 using namespace std;
 
@@ -36,10 +37,12 @@ public:
     }
     
     void deleteRecord(const string& index, int value) {
-        // Read all records, mark matching ones as deleted
-        vector<string> lines;
+        // Use a temporary file to avoid loading everything into memory
+        string tempFile = dataFile + ".tmp";
         ifstream inFile(dataFile);
+        ofstream outFile(tempFile);
         string line;
+        bool found = false;
         
         while (getline(inFile, line)) {
             istringstream iss(line);
@@ -48,22 +51,22 @@ public:
             int active;
             
             if (iss >> fileIndex >> fileValue >> active) {
-                if (fileIndex == index && fileValue == value && active == 1) {
-                    // Mark as deleted
-                    lines.push_back(fileIndex + " " + to_string(fileValue) + " 0");
+                if (fileIndex == index && fileValue == value && active == 1 && !found) {
+                    // Mark as deleted (only first occurrence)
+                    outFile << fileIndex << " " << fileValue << " 0" << "\n";
+                    found = true;
                 } else {
-                    lines.push_back(line);
+                    outFile << line << "\n";
                 }
             }
         }
-        inFile.close();
         
-        // Write back all records
-        ofstream outFile(dataFile);
-        for (const string& l : lines) {
-            outFile << l << "\n";
-        }
+        inFile.close();
         outFile.close();
+        
+        // Replace original file with temp file
+        remove(dataFile.c_str());
+        rename(tempFile.c_str(), dataFile.c_str());
     }
     
     vector<int> find(const string& index) {
