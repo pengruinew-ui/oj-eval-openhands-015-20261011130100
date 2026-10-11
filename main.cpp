@@ -10,7 +10,7 @@ using namespace std;
 
 class FileStorage {
 private:
-    string dataFile = "storage.txt";
+    string dataFile = "storage.dat";
     
 public:
     FileStorage() {
@@ -33,6 +33,7 @@ public:
         if (!file) return;
         
         file << index << " " << value << "\n";
+        file.flush();
         file.close();
     }
     
@@ -60,6 +61,7 @@ public:
         }
         
         inFile.close();
+        outFile.flush();
         outFile.close();
         
         // Replace original file with temp file
