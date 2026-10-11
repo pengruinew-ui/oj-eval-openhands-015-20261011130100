@@ -125,12 +125,20 @@ int main() {
     FileStorage storage;
     
     int n;
-    cin >> n;
+    if (!(cin >> n)) return 0;
     cin.ignore(); // Ignore newline after n
     
     for (int i = 0; i < n; i++) {
         string line;
-        getline(cin, line);
+        if (!getline(cin, line)) break;
+        
+        // Trim leading/trailing whitespace
+        size_t start = line.find_first_not_of(" \t\r\n");
+        if (start == string::npos) continue;
+        size_t end = line.find_last_not_of(" \t\r\n");
+        line = line.substr(start, end - start + 1);
+        
+        if (line.empty()) continue;
         
         size_t space1 = line.find(' ');
         if (space1 == string::npos) continue;
@@ -138,23 +146,59 @@ int main() {
         string command = line.substr(0, space1);
         string rest = line.substr(space1 + 1);
         
+        // Trim rest
+        start = rest.find_first_not_of(" \t");
+        if (start != string::npos) {
+            rest = rest.substr(start);
+        }
+        
         if (command == "insert") {
             size_t space2 = rest.find(' ');
             if (space2 == string::npos) continue;
             
             string index = rest.substr(0, space2);
-            int value = stoi(rest.substr(space2 + 1));
-            storage.insert(index, value);
+            string valueStr = rest.substr(space2 + 1);
+            
+            // Trim value string
+            start = valueStr.find_first_not_of(" \t");
+            if (start != string::npos) {
+                valueStr = valueStr.substr(start);
+            }
+            
+            try {
+                int value = stoi(valueStr);
+                storage.insert(index, value);
+            } catch (...) {
+                continue;
+            }
             
         } else if (command == "delete") {
             size_t space2 = rest.find(' ');
             if (space2 == string::npos) continue;
             
             string index = rest.substr(0, space2);
-            int value = stoi(rest.substr(space2 + 1));
-            storage.deleteRecord(index, value);
+            string valueStr = rest.substr(space2 + 1);
+            
+            // Trim value string
+            start = valueStr.find_first_not_of(" \t");
+            if (start != string::npos) {
+                valueStr = valueStr.substr(start);
+            }
+            
+            try {
+                int value = stoi(valueStr);
+                storage.deleteRecord(index, value);
+            } catch (...) {
+                continue;
+            }
             
         } else if (command == "find") {
+            // Trim index
+            start = rest.find_first_not_of(" \t");
+            if (start != string::npos) {
+                rest = rest.substr(start);
+            }
+            
             string index = rest;
             vector<int> results = storage.find(index);
             
