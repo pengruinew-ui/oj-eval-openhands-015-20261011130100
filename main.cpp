@@ -28,11 +28,11 @@ public:
             return; // Don't insert duplicate
         }
         
-        // Append new record in format: index value active
+        // Append new record in format: index value
         ofstream file(dataFile, ios::app);
         if (!file) return;
         
-        file << index << " " << value << " 1" << "\n";
+        file << index << " " << value << "\n";
         file.close();
     }
     
@@ -48,12 +48,10 @@ public:
             istringstream iss(line);
             string fileIndex;
             int fileValue;
-            int active;
             
-            if (iss >> fileIndex >> fileValue >> active) {
-                if (fileIndex == index && fileValue == value && active == 1 && !found) {
-                    // Mark as deleted (only first occurrence)
-                    outFile << fileIndex << " " << fileValue << " 0" << "\n";
+            if (iss >> fileIndex >> fileValue) {
+                if (fileIndex == index && fileValue == value && !found) {
+                    // Skip this line (delete it)
                     found = true;
                 } else {
                     outFile << line << "\n";
@@ -78,10 +76,9 @@ public:
             istringstream iss(line);
             string fileIndex;
             int value;
-            int active;
             
-            if (iss >> fileIndex >> value >> active) {
-                if (fileIndex == index && active == 1) {
+            if (iss >> fileIndex >> value) {
+                if (fileIndex == index) {
                     results.push_back(value);
                 }
             }
@@ -113,10 +110,9 @@ private:
             istringstream iss(line);
             string fileIndex;
             int fileValue;
-            int active;
             
-            if (iss >> fileIndex >> fileValue >> active) {
-                if (fileIndex == index && fileValue == value && active == 1) {
+            if (iss >> fileIndex >> fileValue) {
+                if (fileIndex == index && fileValue == value) {
                     file.close();
                     return true;
                 }
@@ -177,7 +173,7 @@ int main() {
             
             try {
                 int value = stoi(valueStr);
-                storage.insertFast(index, value);
+                storage.insert(index, value);
             } catch (...) {
                 continue;
             }
